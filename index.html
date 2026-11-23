@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Monitor BTC">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Monitor BTC</title>
+<style>
+:root{
+  --bg:#f4f6f8;--card:#ffffff;--tx:#18202a;--mut:#5f6b78;--bd:#dde3ea;
+  --azul:#2563eb;--verde:#15803d;--verm:#dc2626;--amar:#b45309;--cinza:#94a3b8;--roxo:#7c3aed;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0f141a;--card:#18202a;--tx:#e6ebf1;--mut:#9aa7b4;--bd:#2a3440;
+  --azul:#60a5fa;--verde:#4ade80;--verm:#f87171;--amar:#fbbf24;--cinza:#64748b;--roxo:#c084fc;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+h1{font-size:20px;margin:0}
+h2{font-size:15px;margin:0 0 10px}
+.st{display:flex;align-items:center;gap:8px;color:var(--mut);font-size:13px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--cinza)}
+.dot.ok{background:var(--verde)}.dot.err{background:var(--verm)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px 14px}
+.k{color:var(--mut);font-size:12px}
+.v{font-size:20px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+.s{color:var(--mut);font-size:12px;font-variant-numeric:tabular-nums}
+.pos{color:var(--verde)}.neg{color:var(--verm)}
+.estado{font-size:16px;font-weight:700}
+.e-parado{color:var(--mut)}.e-aguardando{color:var(--azul)}.e-armado{color:var(--amar)}.e-alerta{color:var(--verm)}
+.banner{display:none;background:var(--verm);color:#fff;border-radius:10px;padding:14px 16px;margin-bottom:14px;font-weight:600;font-size:16px}
+.banner.on{display:block;animation:pisca 1s steps(2) infinite}
+@keyframes pisca{50%{opacity:.75}}
+.cols{display:grid;grid-template-columns:320px 1fr;gap:14px;margin-bottom:14px}
+@media (max-width:820px){.cols{grid-template-columns:1fr}}
+label{display:block;font-size:12px;color:var(--mut);margin:8px 0 3px}
+input[type=number]{width:100%;padding:7px 9px;border:1px solid var(--bd);border-radius:7px;background:var(--bg);color:var(--tx);font:inherit}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--tx);margin-top:8px}
+button{padding:8px 12px;border-radius:7px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font:inherit;cursor:pointer}
+button.pri{background:var(--azul);border-color:var(--azul);color:#fff}
+button:disabled{opacity:.5;cursor:default}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+canvas{width:100%;height:300px;display:block}
+.seg{display:flex;border:1px solid var(--bd);border-radius:7px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:5px 11px;font-size:13px}
+.seg button+button{border-left:1px solid var(--bd)}
+.seg button.on{background:var(--azul);color:#fff}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-top:6px}
+.leg i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:4px}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:right;white-space:nowrap}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+th{color:var(--mut);font-weight:600;font-size:12px}
+.tbl{overflow-x:auto}
+.muted{color:var(--mut);font-size:12px}
+.resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0}
+footer{color:var(--mut);font-size:12px;margin:18px 0 8px}
+/* ---- celular ---- */
+.wrap{padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+.alertas{margin-bottom:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{font-size:12px;padding:4px 9px;border-radius:99px;border:1px solid var(--bd);color:var(--mut)}
+.chip.ok{border-color:var(--verde);color:var(--verde)}.chip.no{border-color:var(--verm);color:var(--verm)}
+.banner button{margin-top:10px;background:#fff;color:var(--verm);border:0;font-weight:700;min-height:44px;width:100%}
+.aviso{background:var(--card);border:1px solid var(--amar);color:var(--tx);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:13px;display:none}
+.aviso.on{display:block}
+@media (max-width:600px){
+  .wrap{padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}
+  h1{font-size:17px}
+  .grid{grid-template-columns:1fr 1fr;gap:8px}
+  .card{padding:10px 11px}
+  .v{font-size:17px}
+  input[type=number],select{font-size:16px!important;min-height:44px}
+  button{min-height:44px}
+  .btns button{flex:1 1 45%}
+  canvas{height:230px}
+  .banner{position:sticky;top:env(safe-area-inset-top);z-index:5}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Monitor BTC — alerta de recuo após alta</h1>
+  <div class="st"><span class="dot" id="dot"></span><span id="stTxt">Conectando à Binance…</span></div>
+</header>
+
+<div class="banner" id="banner"><div id="bannerTxt"></div><button id="bSilenciar" type="button">Silenciar alarme</button></div>
+<div class="aviso" id="aviso"></div>
+
+<div class="card alertas">
+  <h2>Alertas no celular</h2>
+  <p class="muted" style="margin:0">Toque uma vez para liberar som, vibração e tela sempre ligada (o celular só permite isso após um toque). Deixe esta página aberta e na frente: com a tela bloqueada ou o app em segundo plano, o celular pausa o monitor. Ao voltar, a página confere pelo histórico de 1 min o que aconteceu enquanto estava pausada.</p>
+  <div class="btns"><button class="pri" id="bAtivar" type="button">Ativar alertas</button><button id="bTeste" type="button">Testar alerta</button></div>
+  <div class="chips"><span class="chip" id="chSom">Som</span><span class="chip" id="chVib">Vibração</span><span class="chip" id="chTela">Tela ligada</span><span class="chip" id="chNot">Notificação</span></div>
+</div>
+
+<div class="grid">
+  <div class="card"><div class="k">BTC/USDT agora</div><div class="v" id="cPreco">—</div><div class="s" id="cPrecoBrl">—</div></div>
+  <div class="card"><div class="k">Situação da simulação</div><div class="estado e-parado" id="cEstado">Parada</div><div class="s" id="cEstadoSub">Defina os parâmetros e inicie</div></div>
+  <div class="card"><div class="k">Desde a entrada</div><div class="v" id="cVar">—</div><div class="s" id="cEntrada">—</div></div>
+  <div class="card"><div class="k">Topo desde a alta</div><div class="v" id="cTopo">—</div><div class="s" id="cArmar">—</div></div>
+  <div class="card"><div class="k">Gatilho de saída</div><div class="v" id="cGatilho">—</div><div class="s" id="cDist">—</div></div>
+  <div class="card"><div class="k">Capital simulado</div><div class="v" id="cValor">—</div><div class="s" id="cLucro">—</div></div>
+</div>
+
+<div class="cols">
+  <div class="card">
+    <h2>Parâmetros</h2>
+    <label>Capital (R$)</label>
+    <input type="number" id="pCapital" step="100" min="0">
+    <label>Preço de entrada (US$) — vazio = preço atual</label>
+    <input type="number" id="pEntrada" step="100" min="0" placeholder="preço atual">
+    <div class="row">
+      <div><label>Alta para armar (%)</label><input type="number" id="pArm" step="0.5" min="0"></div>
+      <div><label>Recuo do topo (%)</label><input type="number" id="pRecuo" step="0.5" min="0.1"></div>
+    </div>
+    <label>Stop de proteção: queda abaixo da entrada (%) — 0 = desligado</label>
+    <input type="number" id="pStop" step="0.5" min="0">
+    <label>Reentrada: repique a partir do fundo após a saída (%) — 0 = só manual</label>
+    <input type="number" id="pReent" step="0.5" min="0">
+    <label>Conferir preço a cada (segundos)</label>
+    <input type="number" id="pInt" step="5" min="5">
+    <div class="chk"><input type="checkbox" id="pNotif"><span>Notificação do sistema</span></div>
+    <div class="chk"><input type="checkbox" id="pSom"><span>Alarme sonoro</span></div>
+    <div class="chk"><input type="checkbox" id="pVib"><span>Vibrar (Android)</span></div>
+    <div class="btns">
+      <button class="pri" id="bIniciar">Iniciar simulação</button>
+      <button id="bReentrar" style="display:none">Reentrar no preço atual</button>
+      <button id="bEncerrar" disabled>Encerrar</button>
+    </div>
+    <p class="muted">Os percentuais podem ser ajustados com a simulação rodando. O preço de entrada fica fixo até reiniciar.</p>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <h2 id="gTit" style="margin:0">Últimas 24 horas</h2>
+      <div class="seg" id="gPer">
+        <button data-p="dia">Dia</button><button data-p="mes">Mês</button><button data-p="tri">Trimestre</button><button data-p="ano">Ano</button>
+      </div>
+    </div>
+    <canvas id="graf"></canvas>
+    <div class="leg">
+      <span><i style="background:var(--tx)"></i>Preço</span>
+      <span><i style="background:var(--azul)"></i>Entrada / reentrada</span>
+      <span><i style="background:var(--amar)"></i>Arma em</span>
+      <span><i style="background:var(--verde)"></i>Topo</span>
+      <span><i style="background:var(--verm)"></i>Gatilho de saída</span>
+      <span><i style="background:var(--roxo)"></i>Stop de proteção</span>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:14px">
+  <h2>Testar a regra no histórico</h2>
+  <div class="row" style="max-width:520px;align-items:flex-end">
+    <div><label>Período</label>
+      <select id="hDias" style="width:100%;padding:7px;border:1px solid var(--bd);border-radius:7px;background:var(--bg);color:var(--tx);font:inherit">
+        <option value="7">7 dias</option><option value="30" selected>30 dias</option><option value="90">90 dias</option><option value="180">180 dias</option>
+      </select></div>
+    <div><button class="pri" id="bHist" style="width:100%">Rodar com os parâmetros atuais</button></div>
+  </div>
+  <p class="muted">Usa candles de 15 min da Binance. Começa comprado no início do período; a cada alerta (recuo do topo ou stop), sai no gatilho e só volta quando o preço subir o % de reentrada a partir do fundo (com 0, volta no candle seguinte). “24h depois” mostra para onde o preço foi após cada saída: se subiu muito, o recuo pode estar apertado demais.</p>
+  <div id="hRes"></div>
+</div>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+    <h2 style="margin:0">Registro de eventos</h2>
+    <div style="display:flex;gap:8px"><button id="bCsv">Exportar CSV</button><button id="bLimpar">Limpar registro</button></div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Data/hora</th><th>Evento</th><th>Preço (US$)</th><th>Entrada</th><th>Topo</th><th>Resultado</th><th>Capital (R$)</th></tr></thead>
+    <tbody id="tLog"></tbody>
+  </table></div>
+</div>
+
+<footer>Somente monitoramento e simulação: nenhuma ordem é enviada à Binance e nenhuma chave de API é usada. Dados públicos de mercado (BTCUSDT e USDTBRL). Resultado em R$ calculado pela variação do BTC em dólar, sem taxas e sem variação cambial. A página precisa ficar aberta e na frente, com a tela ligada, para o monitor funcionar em tempo real. Não é recomendação de investimento.</footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+const BASES=['https://api.binance.com','https://data-api.binance.vision'];
+let baseIdx=0;
+async function api(path){
+  let err;
+  for(let i=0;i<BASES.length;i++){
+    const idx=(baseIdx+i)%BASES.length;
+    try{
+      const r=await fetch(BASES[idx]+path,{cache:'no-store'});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const j=await r.json(); baseIdx=idx; return j;
+    }catch(e){err=e;}
+  }
+  throw err;
+}
+
+const CHAVE='monitorBtc.v1';
+const DEF={capital:13000,entrada:'',arm:3,recuo:2,stop:3,reent:2,intervalo:10,notif:true,som:true,vib:true,periodo:'dia'};
+let cfg={...DEF};
+let sim={ativo:false,estado:'parado',entrada:null,topo:null,inicio:null,saida:null,motivo:null};
+let log=[];
+let preco=null,usdbrl=null,ultimo=null,serie=[],visto=null;
+
+function carregar(){
+  try{const d=JSON.parse(localStorage.getItem(CHAVE)||'null'); if(d){cfg={...DEF,...d.cfg}; if(d.sim) sim=d.sim; if(Array.isArray(d.log)) log=d.log; if(d.visto) visto=d.visto;}}catch(e){}
+}
+function salvar(){try{localStorage.setItem(CHAVE,JSON.stringify({cfg,sim,log,visto}));}catch(e){}}
+
+const $=id=>document.getElementById(id);
+const nf2=new Intl.NumberFormat('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const brl=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+const usd=n=>n==null||isNaN(n)?'—':'US$ '+nf2.format(n);
+const pct=n=>n==null||isNaN(n)?'—':(n>=0?'+':'')+nf2.format(n*100)+'%';
+const dh=t=>{const d=new Date(t);const p=x=>String(x).padStart(2,'0');return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;};
+const cls=(el,n)=>{el.classList.remove('pos','neg'); if(n>0)el.classList.add('pos'); else if(n<0)el.classList.add('neg');};
+
+/* ---------- parâmetros ---------- */
+function lerParams(){
+  cfg.capital=Math.max(0,+$('pCapital').value||0);
+  cfg.entrada=$('pEntrada').value;
+  cfg.arm=Math.max(0,+$('pArm').value||0);
+  cfg.recuo=Math.max(0.1,+$('pRecuo').value||0.1);
+  cfg.stop=Math.max(0,+$('pStop').value||0);
+  cfg.reent=Math.max(0,+$('pReent').value||0);
+  cfg.intervalo=Math.max(5,+$('pInt').value||10);
+  cfg.notif=$('pNotif').checked; cfg.som=$('pSom').checked; cfg.vib=$('pVib').checked;
+  salvar(); render();
+}
+function preencher(){
+  $('pCapital').value=cfg.capital; $('pEntrada').value=cfg.entrada; $('pArm').value=cfg.arm;
+  $('pRecuo').value=cfg.recuo; $('pStop').value=cfg.stop; $('pReent').value=cfg.reent; $('pInt').value=cfg.intervalo; $('pNotif').checked=cfg.notif; $('pSom').checked=cfg.som; $('pVib').checked=cfg.vib;
+}
+['pCapital','pEntrada','pArm','pRecuo','pStop','pReent','pInt','pNotif','pSom','pVib'].forEach(id=>$(id).addEventListener('change',lerParams));
+
+/* ---------- lógica do alerta ---------- */
+function registrar(evento,p,t){
+  const e=sim.entrada, r=e?p/e-1:null;
+  log.unshift({t:t||Date.now(),evento,preco:p,entrada:e,topo:sim.topo,res:r,capital:e?capAtual()*(1+r):null});
+  if(log.length>500) log.length=500;
+}
+function capAtual(){return sim.cap||cfg.capital;}
+function sair(p,motivo,texto,t){
+  sim.estado='alerta';sim.saida=p;sim.motivo=motivo;sim.fundo=p;registrar(texto,p,t);alertar(p);
+}
+function precoReent(){return cfg.reent>0&&sim.fundo?sim.fundo*(1+cfg.reent/100):null;}
+function precoStop(){return cfg.stop>0&&sim.entrada?sim.entrada*(1-cfg.stop/100):null;}
+function avaliar(p,t){
+  if(!sim.ativo) return;
+  if(sim.estado==='alerta'){
+    if(cfg.reent>0){
+      if(p<(sim.fundo||Infinity)) sim.fundo=p;
+      if(p>=precoReent()){
+        const fundo=sim.fundo;
+        iniciar(p,capAtual()*(sim.saida/sim.entrada),'Reentrada — repique de '+nf2.format(cfg.reent)+'% do fundo (US$ '+nf2.format(fundo)+')',t);
+        avisar('Monitor BTC — sinal de reentrada','BTC subiu '+nf2.format(cfg.reent)+'% a partir do fundo de US$ '+nf2.format(fundo)+' — US$ '+nf2.format(p),false,null,'reent');
+        return;
+      }
+      salvar();
+    }
+    return;
+  }
+  const st=precoStop();
+  if(st&&p<=st&&(sim.estado==='aguardando'||st>sim.topo*(1-cfg.recuo/100))){
+    sair(p,'stop','SAIR — stop de proteção ('+nf2.format(cfg.stop)+'% abaixo da entrada)',t); salvar(); return;
+  }
+  if(sim.estado==='aguardando'){
+    if(p>=sim.entrada*(1+cfg.arm/100)){sim.estado='armado';sim.topo=p;registrar('Alta confirmada — monitorando recuo',p,t);}
+  }else if(sim.estado==='armado'){
+    if(p>sim.topo) sim.topo=p;
+    if(p<=sim.topo*(1-cfg.recuo/100)){
+      sair(p,'recuo','SAIR — recuou '+nf2.format(cfg.recuo)+'% do topo',t);
+    }
+  }
+  salvar();
+}
+function iniciar(entrada,cap,texto,t){
+  if(!entrada){mostrarAviso('Ainda sem preço da Binance. Aguarde a primeira leitura.');return;}
+  sim={ativo:true,estado:'aguardando',entrada,topo:null,inicio:t||Date.now(),saida:null,motivo:null,fundo:null,cap:cap||cfg.capital};
+  registrar(texto||'Entrada simulada',entrada,t);
+  if(!t){ ativarAlertas(); visto=Date.now(); if(preco) avaliar(preco); }
+  salvar(); render();
+}
+$('bIniciar').onclick=()=>{lerParams(); const e=+cfg.entrada>0?+cfg.entrada:preco;
+  if(sim.ativo&&!confirm('Reiniciar a simulação com nova entrada?')) return; iniciar(e);};
+$('bReentrar').onclick=()=>pararAlarme()||iniciar(preco,capAtual()*(sim.saida/sim.entrada),'Reentrada manual');
+$('bEncerrar').onclick=()=>{if(!sim.ativo)return; pararAlarme(); if(preco) registrar('Simulação encerrada',preco); sim.ativo=false;sim.estado='parado';salvar();render();};
+$('bTeste').onclick=async()=>{await ativarAlertas(); alertar(preco||0,true);};
+
+/* ---------- avisos no celular ---------- */
+let titOrig=document.title,pisca=null;
+function motivoTxt(){return sim.motivo==='stop'?'BTC caiu '+nf2.format(cfg.stop)+'% abaixo da entrada (stop de proteção)':'BTC recuou '+nf2.format(cfg.recuo)+'% do topo';}
+function mostrarAviso(txt,ms){const a=$('aviso');a.textContent=txt;a.classList.add('on');clearTimeout(a._t);a._t=setTimeout(()=>a.classList.remove('on'),ms||20000);}
+
+/* som (Web Audio, liberado no toque) */
+let ac=null;
+function somDesbloquear(){
+  try{if(navigator.audioSession) navigator.audioSession.type='playback';}catch(e){}
+  try{
+    ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+    if(ac.state!=='running') ac.resume();
+    const b=ac.createBuffer(1,1,22050),s=ac.createBufferSource();s.buffer=b;s.connect(ac.destination);s.start(0);
+  }catch(e){}
+}
+function bip(tipo){
+  if(!ac) return; try{if(ac.state!=='running') ac.resume();}catch(e){}
+  const notas=tipo==='reent'?[660,880]:[880,660,880,660], t0=ac.currentTime;
+  notas.forEach((f,i)=>{const o=ac.createOscillator(),g=ac.createGain();o.type='square';o.frequency.value=f;
+    const t=t0+i*0.22;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.35,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+0.19);
+    o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+0.2);});
+}
+let alarme=null;
+function pararAlarme(){clearInterval(alarme);alarme=null;try{navigator.vibrate&&navigator.vibrate(0);}catch(e){}}
+function tocarAlarme(tipo,teste){
+  pararAlarme();
+  const vez=()=>{ if(cfg.som) bip(tipo);
+    if(cfg.vib&&navigator.vibrate){try{navigator.vibrate(tipo==='reent'?[200,100,200]:[500,150,500,150,500]);}catch(e){}} };
+  vez(); if(teste) return;
+  let n=0; const max=tipo==='reent'?3:60; /* saída: repete a cada 2 s por até 2 min */
+  alarme=setInterval(()=>{if(++n>=max) pararAlarme(); else vez();},2000);
+}
+$('bSilenciar').onclick=()=>{pararAlarme();};
+
+/* tela sempre ligada */
+let wl=null;
+async function pedirTela(){
+  try{ if('wakeLock' in navigator&&!wl&&document.visibilityState==='visible'){
+    wl=await navigator.wakeLock.request('screen'); wl.addEventListener('release',()=>{wl=null;chips();}); } }catch(e){}
+  chips();
+}
+
+/* notificação: via service worker (exigido no Android; no iPhone só com o app na tela inicial) */
+let swReg=null;
+if('serviceWorker' in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('sw.js').then(r=>{swReg=r;}).catch(()=>{});}
+function notificar(titulo,msg,teste){
+  if(!cfg.notif||!('Notification' in window)||Notification.permission!=='granted') return;
+  const op={body:msg,tag:'monitor-btc',renotify:true,requireInteraction:!teste,icon:'icon-192.png',badge:'icon-192.png',vibrate:[500,150,500]};
+  if(swReg&&swReg.showNotification){swReg.showNotification(titulo,op).catch(()=>{});return;}
+  try{new Notification(titulo,op);}catch(e){}
+}
+let liberado=false;
+async function ativarAlertas(){
+  somDesbloquear();
+  try{if(cfg.notif&&'Notification' in window&&Notification.permission==='default') await Notification.requestPermission();}catch(e){}
+  await pedirTela(); liberado=true; chips();
+}
+$('bAtivar').onclick=async()=>{await ativarAlertas(); bip('reent'); if(cfg.vib&&navigator.vibrate) navigator.vibrate(150);};
+
+function chip(id,txt,estado){const c=$(id);c.textContent=txt;c.className='chip'+(estado===true?' ok':estado===false?' no':'');}
+function chips(){
+  chip('chSom',!cfg.som?'Som: desligado':ac&&ac.state==='running'?'Som: ativo':'Som: toque em Ativar',!cfg.som?null:!!(ac&&ac.state==='running'));
+  chip('chVib',!('vibrate' in navigator)?'Vibração: não suportada aqui':cfg.vib?'Vibração: ativa':'Vibração: desligada','vibrate' in navigator?(cfg.vib||null):false);
+  chip('chTela',!('wakeLock' in navigator)?'Tela ligada: não suportada':wl?'Tela ligada: ativa':'Tela ligada: toque em Ativar','wakeLock' in navigator?!!wl:false);
+  const N='Notification' in window;
+  chip('chNot',!cfg.notif?'Notificação: desligada':!N?'Notificação: adicione à tela inicial':Notification.permission==='granted'?'Notificação: ativa':Notification.permission==='denied'?'Notificação: bloqueada no navegador':'Notificação: toque em Ativar',
+    !cfg.notif?null:N&&Notification.permission==='granted'?true:N&&Notification.permission==='default'?null:false);
+  $('bAtivar').textContent=liberado&&(!('wakeLock' in navigator)||wl)?'Alertas ativos ✓':'Ativar alertas';
+}
+
+function avisar(titulo,msg,teste,tituloAba,tipo){
+  notificar(titulo,msg,teste);
+  tocarAlarme(tipo||'saida',teste);
+  if(!teste){
+    clearInterval(pisca); let f=false; const t=tituloAba||'⚠ BTC — '+titulo.replace('Monitor BTC — ','');
+    pisca=setInterval(()=>{document.title=(f=!f)?t:titOrig;},1000);
+  }
+}
+function alertar(p,teste){
+  const r=sim.entrada?p/sim.entrada-1:0;
+  const msg=(teste?'[TESTE] ':'')+motivoTxt()+` — US$ ${nf2.format(p)}`+(sim.entrada&&!teste?` | resultado ${pct(r)} (${brl.format(capAtual()*(1+r))})`:'');
+  avisar('Monitor BTC — sinal de saída',msg,teste,'⚠ SAIR — BTC');
+  if(teste){ $('bannerTxt').textContent=msg; $('banner').classList.add('on'); setTimeout(()=>{if(sim.estado!=='alerta'){$('banner').classList.remove('on');$('bannerTxt').textContent='';}},4000); }
+}
+window.addEventListener('focus',()=>{clearInterval(pisca);document.title=titOrig;});
+
+/* recuperação: o celular pausa a página em segundo plano; ao voltar, refaz o caminho pelos candles de 1 min */
+let ocupado=false;
+async function recuperar(){
+  if(ocupado||!sim.ativo||!visto) return;
+  const agora=Date.now(); if(agora-visto<90e3) return;
+  ocupado=true; const de=visto, antes=log.length;
+  try{
+    let ini=Math.max(visto,agora-3*864e5); const pts=[];
+    while(ini<agora-60e3){
+      const k=await api(`/api/v3/klines?symbol=BTCUSDT&interval=1m&startTime=${ini}&limit=1000`);
+      if(!k.length) break;
+      for(const x of k){const t=x[0],o=+x[1],h=+x[2],l=+x[3],c=+x[4];
+        (c>=o?[o,l,h,c]:[o,h,l,c]).forEach((v,i)=>pts.push([t+i*15e3,v]));}
+      ini=k[k.length-1][0]+60e3; if(k.length<1000) break;
+    }
+    for(const [t,v] of pts){ if(t>=de) avaliar(v,t); }
+    visto=agora; salvar();
+    const n=log.length-antes;
+    mostrarAviso(`O celular pausou o monitor das ${dh(de).slice(11)} às ${dh(agora).slice(11)}. Conferido no histórico de 1 min: ${n?n+' evento(s) registrado(s) — veja o registro.':'nenhum gatilho no período.'}`,30000);
+  }catch(e){}
+  ocupado=false;
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ pedirTela(); tick(); } });
+
+/* ---------- coleta ---------- */
+const PER={
+  dia:{i:'15m',n:96,ms:15*60e3,tit:'Últimas 24 horas'},
+  mes:{i:'1h',n:720,ms:3600e3,tit:'Último mês'},
+  tri:{i:'4h',n:540,ms:4*3600e3,tit:'Último trimestre'},
+  ano:{i:'1d',n:365,ms:864e5,tit:'Último ano'}
+};
+function per(){return PER[cfg.periodo]||PER.dia;}
+async function carregarSerie(){
+  const P=per(), alvo=cfg.periodo;
+  try{const k=await api(`/api/v3/klines?symbol=BTCUSDT&interval=${P.i}&limit=${P.n}`);
+    if(alvo!==cfg.periodo) return;
+    const agora=Date.now(); const vivos=serie.filter(s=>s[0]>agora-60e3);
+    serie=k.map(x=>[Math.min(x[0]+P.ms,agora-1),+x[4]]).concat(vivos).sort((a,b)=>a[0]-b[0]);}catch(e){}
+  render();
+}
+function marcarPeriodo(){
+  document.querySelectorAll('#gPer button').forEach(b=>b.classList.toggle('on',b.dataset.p===cfg.periodo));
+  $('gTit').textContent=per().tit;
+}
+document.querySelectorAll('#gPer button').forEach(b=>b.onclick=()=>{
+  if(cfg.periodo===b.dataset.p) return;
+  cfg.periodo=b.dataset.p; salvar(); marcarPeriodo(); serie=[]; render(); carregarSerie();
+});
+async function tick(){
+  try{
+    const [b,u]=await Promise.all([api('/api/v3/ticker/price?symbol=BTCUSDT'),api('/api/v3/ticker/price?symbol=USDTBRL')]);
+    preco=+b.price; usdbrl=+u.price; ultimo=Date.now();
+    if(serie.length){
+      serie.push([ultimo,preco]); const P=per(), lim=ultimo-P.n*P.ms; while(serie.length&&serie[0][0]<lim) serie.shift();
+    }
+    $('dot').className='dot ok'; $('stTxt').textContent='Binance ao vivo — atualizado '+dh(ultimo).slice(11)+':'+String(new Date(ultimo).getSeconds()).padStart(2,'0');
+    if(!ocupado){ await recuperar(); avaliar(preco); visto=ultimo; salvar(); }
+  }catch(e){
+    $('dot').className='dot err'; $('stTxt').textContent='Sem conexão com a Binance ('+e.message+') — tentando de novo';
+  }
+  render();
+}
+async function loop(){await tick(); setTimeout(loop,cfg.intervalo*1000);}
+setInterval(carregarSerie,15*60e3);
+
+/* ---------- tela ---------- */
+const NOMES={parado:'Parada',aguardando:'Aguardando alta',armado:'Armado — vigiando recuo',alerta:'SINAL DE SAÍDA — fora do BTC'};
+function render(){
+  $('cPreco').textContent=usd(preco);
+  $('cPrecoBrl').textContent=preco&&usdbrl?brl.format(preco*usdbrl)+' (USDT/BRL '+nf2.format(usdbrl)+')':'—';
+  const e=sim.ativo?sim.entrada:null, est=sim.ativo?sim.estado:'parado';
+  const ce=$('cEstado'); ce.textContent=NOMES[est]; ce.className='estado e-'+est;
+  const armEm=e?e*(1+cfg.arm/100):null;
+  const gat=sim.topo&&est!=='aguardando'?sim.topo*(1-cfg.recuo/100):null;
+  const st=sim.ativo?precoStop():null;
+  $('cEstadoSub').textContent=est==='parado'?'Defina os parâmetros e inicie':est==='aguardando'?'Arma acima de '+usd(armEm)+(st?' · stop em '+usd(st):''):est==='armado'?'Alerta se cair '+nf2.format(cfg.recuo)+'% do topo':'Saiu em '+usd(sim.saida)+(sim.motivo==='stop'?' (stop)':'')+(cfg.reent>0?' · reentra acima de '+usd(precoReent())+' (fundo '+usd(sim.fundo)+')':' · reentrada manual');
+  const ref=est==='alerta'?sim.saida:preco;
+  const r=e&&ref?ref/e-1:null;
+  $('cVar').textContent=pct(r); cls($('cVar'),r);
+  $('cEntrada').textContent=e?'Entrada '+usd(e)+' em '+dh(sim.inicio):'—';
+  $('cTopo').textContent=usd(sim.ativo?sim.topo:null);
+  $('cArmar').textContent=e?'Arma em '+usd(armEm)+' (+'+nf2.format(cfg.arm)+'%)':'—';
+  const gatEf=est==='armado'?Math.max(gat||0,st||0):est==='aguardando'?st:null;
+  $('cGatilho').textContent=est==='alerta'?usd(sim.saida):usd(gatEf);
+  $('cDist').textContent=gatEf&&preco&&(est==='armado'||est==='aguardando')?(est==='aguardando'?'Stop: ':'')+'falta cair '+nf2.format(Math.max(0,preco/gatEf-1)*100)+'%':est==='aguardando'?'Stop desligado':'—';
+  const valor=sim.ativo&&r!=null?capAtual()*(1+r):capAtual(), lt=valor-cfg.capital;
+  $('cValor').textContent=brl.format(valor);
+  $('cLucro').textContent=sim.ativo?(lt>=0?'Ganho ':'Perda ')+brl.format(Math.abs(lt))+' sobre '+brl.format(cfg.capital):'—'; cls($('cLucro'),sim.ativo?lt:0);
+  $('bEncerrar').disabled=!sim.ativo;
+  $('bReentrar').style.display=est==='alerta'?'':'none';
+  $('bIniciar').textContent=sim.ativo?'Reiniciar simulação':'Iniciar simulação';
+  const bn=$('banner');
+  if(est==='alerta'){$('bannerTxt').textContent='⚠ SINAL DE SAÍDA — '+motivoTxt()+(sim.motivo==='stop'?'':' ('+usd(sim.topo)+')')+'. Saída simulada em '+usd(sim.saida)+' | resultado '+pct(r)+' = '+brl.format(capAtual()*(1+r))+(cfg.reent>0?' | aviso de reentrada acima de '+usd(precoReent()):'');bn.classList.add('on');}
+  else if(!$('bannerTxt').textContent.startsWith('[TESTE]')){ bn.classList.remove('on'); pararAlarme(); }
+  chips();
+  desenhar([{v:e,c:'--azul'},{v:est==='aguardando'?armEm:null,c:'--amar'},{v:est!=='aguardando'?sim.topo:null,c:'--verde'},{v:gat,c:'--verm'},{v:est!=='alerta'?st:null,c:'--roxo'},{v:est==='alerta'?precoReent():null,c:'--azul'}].filter(l=>sim.ativo&&l.v));
+  $('tLog').innerHTML=log.length?log.map(l=>`<tr><td>${dh(l.t)}</td><td>${l.evento.replace(/</g,'&lt;')}</td><td>${nf2.format(l.preco)}</td><td>${l.entrada?nf2.format(l.entrada):'—'}</td><td>${l.topo?nf2.format(l.topo):'—'}</td><td class="${l.res>0?'pos':l.res<0?'neg':''}">${pct(l.res)}</td><td>${l.capital!=null?brl.format(l.capital):'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="muted" style="text-align:left">Nenhum evento ainda.</td></tr>';
+}
+
+function cor(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function desenhar(linhas){
+  const cv=$('graf'),dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;
+  cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext('2d');g.scale(dpr,dpr);g.clearRect(0,0,W,H);
+  if(serie.length<2) return;
+  const pl=8,pr=86,pt=10,pb=22;
+  let mn=Infinity,mx=-Infinity; serie.forEach(s=>{mn=Math.min(mn,s[1]);mx=Math.max(mx,s[1]);});
+  linhas.forEach(l=>{mn=Math.min(mn,l.v);mx=Math.max(mx,l.v);});
+  const pad=(mx-mn)*0.08||50; mn-=pad; mx+=pad;
+  const t0=serie[0][0],t1=serie[serie.length-1][0];
+  const X=t=>pl+(t-t0)/(t1-t0||1)*(W-pl-pr), Y=v=>pt+(mx-v)/(mx-mn)*(H-pt-pb);
+  g.font='11px Segoe UI, sans-serif'; g.fillStyle=cor('--mut'); g.strokeStyle=cor('--bd'); g.lineWidth=1;
+  for(let i=0;i<=4;i++){const v=mn+(mx-mn)*i/4,y=Y(v);g.beginPath();g.moveTo(pl,y);g.lineTo(W-pr,y);g.stroke();g.fillText(nf2.format(Math.round(v)).replace(',00',''),W-pr+6,y+4);}
+  const p2=x=>String(x).padStart(2,'0'), MES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  for(let h=0;h<=4;h++){const t=t0+(t1-t0)*h/4,d=new Date(t);
+    const txt=cfg.periodo==='dia'?p2(d.getHours())+':'+p2(d.getMinutes()):cfg.periodo==='ano'?MES[d.getMonth()]+'/'+String(d.getFullYear()).slice(2):p2(d.getDate())+'/'+p2(d.getMonth()+1);
+    g.fillText(txt,Math.min(X(t),W-pr-34),H-6);}
+  linhas.forEach(l=>{g.strokeStyle=cor(l.c);g.setLineDash([5,4]);g.lineWidth=1.5;g.beginPath();g.moveTo(pl,Y(l.v));g.lineTo(W-pr,Y(l.v));g.stroke();});
+  g.setLineDash([]); g.strokeStyle=cor('--tx'); g.lineWidth=1.6; g.beginPath();
+  serie.forEach((s,i)=>{const x=X(s[0]),y=Y(s[1]); i?g.lineTo(x,y):g.moveTo(x,y);}); g.stroke();
+  const u=serie[serie.length-1]; g.fillStyle=cor('--tx'); g.beginPath(); g.arc(X(u[0]),Y(u[1]),3.5,0,7); g.fill();
+}
+window.addEventListener('resize',render);
+
+/* ---------- histórico ---------- */
+async function klines(dias){
+  const fim=Date.now(); let ini=fim-dias*864e5; const out=[];
+  while(ini<fim){
+    const k=await api(`/api/v3/klines?symbol=BTCUSDT&interval=15m&startTime=${ini}&limit=1000`);
+    if(!k.length) break; out.push(...k); ini=k[k.length-1][0]+1; if(k.length<1000) break;
+  }
+  return out.map(k=>({t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4]}));
+}
+function backtest(c,arm,recuo,stop,reent){
+  let entrada=c[0].o,tIni=c[0].t,estado='aguardando',topo=0,mult=1,fundo=0,velasFora=0;const ciclos=[];
+  for(let i=0;i<c.length;i++){
+    const k=c[i];
+    if(estado==='fora'){
+      const g=fundo*(1+reent);
+      if(k.h>=g){entrada=Math.max(g,k.o);tIni=k.t;estado='aguardando';topo=0;continue;}
+      velasFora++; if(k.l<fundo) fundo=k.l; continue;
+    }
+    const st=stop>0?entrada*(1-stop):0;
+    let gat, motivo;
+    if(estado==='aguardando'){
+      if(st&&k.l<=st){gat=st;motivo='Stop';}
+      else{ if(k.h>=entrada*(1+arm)){estado='armado';topo=k.h;} continue; }
+    }else{
+      const tr=topo*(1-recuo); gat=Math.max(tr,st); motivo=st>tr?'Stop':'Recuo';
+    }
+    if(k.l<=gat){
+      const saida=Math.min(gat,k.o), r=saida/entrada; mult*=r;
+      const f=c.find(x=>x.t>=k.t+864e5), depois=f?f.c/saida-1:null;
+      ciclos.push({ini:tIni,fim:k.t,entrada,topo:estado==='armado'?topo:null,saida,r:r-1,depois,motivo});
+      if(reent>0){estado='fora';fundo=Math.min(saida,k.l);continue;}
+      const nx=c[i+1]; if(!nx){entrada=null;break;}
+      entrada=nx.o;tIni=nx.t;estado='aguardando';topo=0; continue;
+    }
+    if(k.h>topo) topo=k.h;
+  }
+  const ult=c[c.length-1];
+  if(estado==='fora') entrada=null;
+  const aberto=entrada?ult.c/entrada-1:null; if(entrada) mult*=ult.c/entrada;
+  return {ciclos,total:mult-1,segurar:ult.c/c[0].o-1,aberto,fora:estado==='fora',pctFora:velasFora/c.length,ini:c[0].t,fim:ult.t};
+}
+$('bHist').onclick=async()=>{
+  lerParams(); const b=$('bHist'); b.disabled=true; b.textContent='Baixando candles…'; $('hRes').innerHTML='';
+  try{
+    const c=await klines(+$('hDias').value);
+    if(c.length<10) throw new Error('poucos dados');
+    const r=backtest(c,cfg.arm/100,cfg.recuo/100,cfg.stop/100,cfg.reent/100);
+    const ganhos=r.ciclos.filter(x=>x.r>0).length, stops=r.ciclos.filter(x=>x.motivo==='Stop').length, precoces=r.ciclos.filter(x=>x.depois!=null&&x.saida*(1+x.depois)>(x.topo||x.entrada)).length;
+    const card=(k,v,n)=>`<div class="card"><div class="k">${k}</div><div class="v ${n>0?'pos':n<0?'neg':''}">${v}</div></div>`;
+    $('hRes').innerHTML=`<div class="resumo">
+      ${card('Alertas de saída',r.ciclos.length)}
+      ${card('Saídas com ganho',ganhos+' de '+r.ciclos.length)}
+      ${card('Saídas pelo stop',stops)}
+      ${card('Saídas cedo demais¹',precoces)}
+      ${card('Tempo fora do BTC',cfg.reent>0?nf2.format(r.pctFora*100).replace(',00','')+'%':'—')}
+      ${card('Resultado seguindo a regra',pct(r.total),r.total)}
+      ${card('Só segurando o BTC',pct(r.segurar),r.segurar)}
+      ${card('Capital final (regra)',brl.format(cfg.capital*(1+r.total)),r.total)}
+    </div>
+    <p class="muted">${dh(r.ini)} a ${dh(r.fim)}. ¹ preço 24h depois da saída acima do topo anterior (ou da entrada, nas saídas pelo stop). ${r.aberto!=null?'Posição aberta no fim do período: '+pct(r.aberto)+'.':r.fora?'No fim do período estava fora do BTC, esperando a reentrada.':''}</p>
+    <div class="tbl"><table><thead><tr><th>Entrada em</th><th>Saída em</th><th>Motivo</th><th>Entrada</th><th>Topo</th><th>Saída</th><th>Resultado</th><th>24h depois</th></tr></thead><tbody>
+    ${r.ciclos.slice().reverse().map(x=>`<tr><td>${dh(x.ini)}</td><td>${dh(x.fim)}</td><td>${x.motivo}</td><td>${nf2.format(x.entrada)}</td><td>${x.topo?nf2.format(x.topo):'—'}</td><td>${nf2.format(x.saida)}</td><td class="${x.r>0?'pos':'neg'}">${pct(x.r)}</td><td class="${x.depois>0?'pos':x.depois<0?'neg':''}">${pct(x.depois)}</td></tr>`).join('')||'<tr><td colspan="8" class="muted" style="text-align:left">Nenhum alerta no período com esses parâmetros.</td></tr>'}
+    </tbody></table></div>`;
+  }catch(e){$('hRes').innerHTML='<p class="neg">Não foi possível baixar o histórico: '+e.message+'</p>';}
+  b.disabled=false; b.textContent='Rodar com os parâmetros atuais';
+};
+
+/* ---------- registro ---------- */
+$('bCsv').onclick=()=>{
+  const linhas=[['Data/hora','Evento','Preco US$','Entrada','Topo','Resultado %','Capital R$']].concat(log.slice().reverse().map(l=>[dh(l.t),l.evento,nf2.format(l.preco),l.entrada?nf2.format(l.entrada):'',l.topo?nf2.format(l.topo):'',l.res!=null?nf2.format(l.res*100):'',l.capital!=null?nf2.format(l.capital):'']));
+  const csv='﻿'+linhas.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\r\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='monitor-btc-registro.csv'; a.click();
+};
+$('bLimpar').onclick=()=>{if(confirm('Apagar todo o registro de eventos?')){log=[];salvar();render();}};
+
+carregar(); preencher(); marcarPeriodo(); render();
+carregarSerie().then(loop);
+})();
+</script>
+</body>
+</html>
